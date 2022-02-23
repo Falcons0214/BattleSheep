@@ -6,6 +6,12 @@
 #define RIGHT 1
 #define DOWN 2
 #define LEFT 3
+#define DOWNLEFT 4
+#define DOWNRIGHT 5
+#define UPLEFT 6
+#define UPRIGHT 7
+#define UPLINCLINE 8
+#define UPRINCLINE 9
 
 class player
 {
@@ -38,7 +44,12 @@ public:
 
 enum Dir
 {
-    Up = 0, RightUp, RightDown, Down, LeftDown, LeftUp
+    Up = 0,
+    RightUp,
+    RightDown,
+    Down,
+    LeftDown,
+    LeftUp
 };
 
 const int dirDegX[] = {-1, 0, 1, 1, 0, -1};
@@ -82,17 +93,14 @@ public:
     {
         std::cout << "X: " << degX << " Y: " << degY << std::endl;
     }
-
     friend bool operator==(const coordinate &c1, const coordinate &c2)
     {
         return ((c1.degX == c2.degX) && (c1.degY == c2.degY));
     }
-
     coordinate findNeighbor(const Dir &dir) const
     {
         return coordinate(degX + dirDegX[dir], degY + dirDegY[dir]);
     }
-
     bool isNeighborOf(const coordinate &c2) const
     {
         return (
@@ -144,16 +152,6 @@ public:
     }
 };
 
-// struct GroundToken {
-// 	coordinate cells[4];
-// 	bool state;
-// public:
-// 	GroundToken(const coordinate Cells[4]) {
-// 	}
-// 	bool isValid() const {
-// 	}
-// }
-
 struct groundToken
 {
     friend class world;
@@ -161,32 +159,68 @@ struct groundToken
 private:
     coordinate coord[4];
     groundToken() {}
-    groundToken(int x, int y, int dir)
+    groundToken(int x, int y, int method)
     {
         coord[0].setDegXaY(x, y);
-        if (dir == UP)
+        if (method == UP)
         {
             coord[1].setDegXaY(x - 1, y);
             coord[2].setDegXaY(x - 1, y + 1);
             coord[3].setDegXaY(x, y + 1);
         }
-        else if (dir == RIGHT)
+        else if (method == RIGHT)
         {
             coord[1].setDegXaY(x, y + 1);
             coord[2].setDegXaY(x + 1, y + 1);
             coord[3].setDegXaY(x + 1, y);
         }
-        else if (dir == DOWN)
+        else if (method == DOWN)
         {
             coord[1].setDegXaY(x + 1, y);
             coord[2].setDegXaY(x + 1, y - 1);
             coord[3].setDegXaY(x, y - 1);
         }
-        else
+        else if (method == LEFT)
         {
             coord[1].setDegXaY(x, y - 1);
             coord[2].setDegXaY(x - 1, y - 1);
             coord[3].setDegXaY(x - 1, y);
+        }
+        else if (method == UPLEFT)
+        {
+            coord[1].setDegXaY(x - 1, y + 1);
+            coord[2].setDegXaY(x, y + 1);
+            coord[3].setDegXaY(x - 1, y + 2);
+        }
+        else if (method == UPRIGHT)
+        {
+            coord[1].setDegXaY(x - 1, y + 1);
+            coord[2].setDegXaY(x - 1, y);
+            coord[3].setDegXaY(x - 2, y + 1);
+        }
+        else if (method == DOWNLEFT)
+        {
+            coord[1].setDegXaY(x + 1, y - 1);
+            coord[2].setDegXaY(x, y - 1);
+            coord[3].setDegXaY(x + 1, y - 2);
+        }
+        else if (method == DOWNRIGHT)
+        {
+            coord[1].setDegXaY(x + 1, y - 1);
+            coord[2].setDegXaY(x + 1, y);
+            coord[3].setDegXaY(x + 2, y - 1);
+        }
+        else if (method == UPRINCLINE)
+        {
+            coord[1].setDegXaY(x - 1, y + 1);
+            coord[2].setDegXaY(x, y + 1);
+            coord[3].setDegXaY(x + 1, y);
+        }
+        else if (method == UPLINCLINE)
+        {
+            coord[1].setDegXaY(x - 1, y + 1);
+            coord[2].setDegXaY(x - 1, y);
+            coord[3].setDegXaY(x, y - 1);
         }
     }
     bool isPartOfToken(int x, int y)
@@ -201,9 +235,14 @@ private:
 class world
 {
 private:
-    void _pushToGroundCandList(int x, int y, groundToken &puzzle)
+    void _pushToGroundCandList(coordinate coord, groundToken &puzzle)
     {
-        int candsCoord[6][2] = {{x - 1, y + 1}, {x, y + 1}, {x + 1, y}, {x + 1, y - 1}, {x, y - 1}, {x - 1, y}}; // six coordinates beside center hexagon
+        int candsCoord[6][2] = {{coord.getDegX() - 1, coord.getDegY() + 1},
+                                {coord.getDegX(), coord.getDegY() + 1},
+                                {coord.getDegX() + 1, coord.getDegY()},
+                                {coord.getDegX() + 1, coord.getDegY() - 1},
+                                {coord.getDegX(), coord.getDegY() - 1},
+                                {coord.getDegX() - 1, coord.getDegY()}}; // six coordinates beside center hexagon
         for (int i = 0; i < 6; i++)
         {
             int flag = 0;
@@ -219,11 +258,11 @@ private:
                 _groundCandList.push_back(coordinate(candsCoord[i][0], candsCoord[i][1]));
         }
     }
-    void _moveFromGroundCandList(int x, int y)
+    void _moveFromGroundCandList(coordinate coord)
     {
         for (std::vector<coordinate>::iterator it = _groundCandList.begin(); it != _groundCandList.end(); it++)
         {
-            if (x == it->getDegX() && y == it->getDegY())
+            if (coord.getDegX() == it->getDegX() && coord.getDegY() == it->getDegY())
             {
                 _groundCandList.erase(it);
                 return;
@@ -279,6 +318,7 @@ private:
         else
             std::cout << "UPLEFT\n";
     }
+    bool init = false;
     std::vector<coordinate> _groundCandList;
     std::vector<cell> cellList;
 
@@ -286,17 +326,28 @@ public:
     world()
     {
         putGround(0, 0, DOWN);
+        init = true;
     }
     // groundToken operation
-    bool putGround(int x, int y, int dir)
+    bool putGround(int x, int y, int method)
     {
-        groundToken puzzle(x, y, dir);
+        int flag = 1;
+        for(std::vector<coordinate>::iterator it=_groundCandList.begin(); it!=_groundCandList.end(); it++)
+            if(it->getDegX() == x && it->getDegY() == y)
+                flag = 0;
+        if(flag && init)
+        {
+            std::cout<<"Error coordinate\n";
+            return false;
+        }
+        groundToken puzzle(x, y, method);
         for (int i = 0; i < 4; i++)
         {
-            cellList.push_back(cell(puzzle.coord[i].getDegX(), puzzle.coord[i].getDegY()));
-            _moveFromGroundCandList(puzzle.coord[i].getDegX(), puzzle.coord[i].getDegY());
-            _pushToGroundCandList(puzzle.coord[i].getDegX(), puzzle.coord[i].getDegY(), puzzle);
+            cellList.push_back(cell(puzzle.coord[i]));
+            _moveFromGroundCandList(puzzle.coord[i]);
+            _pushToGroundCandList(puzzle.coord[i], puzzle);
         }
+        return true;
     }
     void listGroundCandidates()
     {
@@ -305,20 +356,20 @@ public:
     }
     void getGroundTokenMethod(int x, int y)
     {
-        for (int i = 0; i < 4; i++)
-        {
+        std::string a[10] = {
+            "UP",
+            "RIGHT",
+            "DOWN",
+            "LEFT",
+            "DOWNLEFT",
+            "DOWNRIGHT",
+            "UPLEFT",
+            "UPRIGHT",
+            "UPLINCLINE",
+            "UPRINCLINE"};
+        for (int i = 0; i < 10; i++)
             if (_isTokenLegal(x, y, i))
-            {
-                if (i == UP)
-                    std::cout << "UP\n";
-                else if (i == RIGHT)
-                    std::cout << "RIGHT\n";
-                else if (i == DOWN)
-                    std::cout << "DOWN\n";
-                else
-                    std::cout << "LEFT\n";
-            }
-        }
+                std::cout << a[i] << std::endl;
     }
     // sheep init & operation
     bool initCellSheep(int x, int y, player *own)
@@ -335,10 +386,10 @@ public:
         std::cerr << "Can't find the cell\n";
         return false;
     }
-    void listPlayerSheepCand(int player)
+    void listPlayerSheepCand(const player &player)
     {
         for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
-            if (it->getOwnerId() == player && it->getSheeps() > 1)
+            if (it->getOwnerId() == player.getPlayerNum() && it->getSheeps() > 1)
                 it->showCoordInfo();
     }
     void listMoveCandidates(int x, int y)
@@ -358,7 +409,6 @@ public:
                 return *it;
         }
         std::cerr << "No instence\n";
-        return;
     }
     bool moveSheep(cell &from, cell &to, int num, player *own)
     {
