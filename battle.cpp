@@ -14,22 +14,35 @@ private:
     std::string name;
 
 public:
-    player(): no(0) {}
+    player() : no(0) {}
     player(int num, std::string name)
     {
         if (num > 4)
         {
             std::cerr << "player ID must less than 5\n";
-	    no = -1;
-        } else 
-	    no = num;
+            no = -1;
+        }
+        else
+            no = num;
         this->name = name;
     }
-    void showPlayerInfo() const 
+    void showPlayerInfo() const
     {
         std::cout << "ID: " << no << " Name: " << name << std::endl;
     }
+    int getPlayerNum() const
+    {
+        return no;
+    }
 };
+
+enum Dir
+{
+    Up = 0, RightUp, RightDown, Down, LeftDown, LeftUp
+};
+
+const int dirDegX[] = {-1, 0, 1, 1, 0, -1};
+const int dirDegY[] = {1, 1, 0, -1, -1, 0};
 
 class coordinate
 {
@@ -38,10 +51,10 @@ protected:
 
 public:
     coordinate() {}
-    coordinate(int x, int y): degX(x), degY(y)
+    coordinate(int x, int y) : degX(x), degY(y)
     {
     }
-    coordinate(const coordinate &coor): degX(coor.degX), degY(coor.degY)
+    coordinate(const coordinate &coor) : degX(coor.degX), degY(coor.degY)
     {
     }
     void setDegX(int x)
@@ -61,61 +74,85 @@ public:
     {
         return degX;
     }
-    int getDegY() const 
+    int getDegY() const
     {
         return degY;
     }
-    void showCoordInfo() const 
+    void showCoordInfo() const
     {
         std::cout << "X: " << degX << " Y: " << degY << std::endl;
+    }
+
+    friend bool operator==(const coordinate &c1, const coordinate &c2)
+    {
+        return ((c1.degX == c2.degX) && (c1.degY == c2.degY));
+    }
+
+    coordinate findNeighbor(const Dir &dir) const
+    {
+        return coordinate(degX + dirDegX[dir], degY + dirDegY[dir]);
+    }
+
+    bool isNeighborOf(const coordinate &c2) const
+    {
+        return (
+            *this == c2.findNeighbor(Up) ||
+            *this == c2.findNeighbor(RightUp) ||
+            *this == c2.findNeighbor(LeftUp) ||
+            *this == c2.findNeighbor(Down) ||
+            *this == c2.findNeighbor(RightDown) ||
+            *this == c2.findNeighbor(LeftDown));
     }
 };
 
 class cell : public coordinate
 {
 private:
-    int ownerId; // -1 unoccupied
-    int sheeps;
+    const player *owner = nullptr;
+    int sheeps = 0;
 
 public:
     cell() {}
-    cell(int x, int y)
+    cell(int x, int y) : coordinate(x, y)
     {
-        ownerId = -1;
-        sheeps = 0;
-        this->setDegXaY(x, y);
     }
-    bool setowner(int own)
+    cell(const cell &org) : coordinate(org), owner(org.owner), sheeps(org.sheeps) {}
+    cell(const coordinate &org) : coordinate(org) {}
+    void setowner(const player *own)
     {
-        if (own != -1 && (own < 1 || own > 4))
-        {
-            std::cerr << "The range of ownerId is 1~4 or -1\n";
-            return false;
-        }
-        ownerId = own;
-        return true;
+        owner = own;
     }
     void setSheeps(int num)
     {
         sheeps = num;
     }
-    int getOwnerId()
+    int getOwnerId() const
     {
-        return ownerId;
+        return owner->getPlayerNum();
     }
-    int getSheeps()
+    int getSheeps() const
     {
         return sheeps;
     }
-    void showOwner()
+    void showOwner() const
     {
-        std::cout << "OwnerID: " << ownerId << std::endl;
+        std::cout << "OwnerID: " << owner->getPlayerNum() << std::endl;
     }
-    void showSheeps()
+    void showSheeps() const
     {
         std::cout << "Sheeps: " << sheeps << std::endl;
     }
 };
+
+// struct GroundToken {
+// 	coordinate cells[4];
+// 	bool state;
+// public:
+// 	GroundToken(const coordinate Cells[4]) {
+// 	}
+// 	bool isValid() const {
+// 	}
+// }
 
 struct groundToken
 {
@@ -284,13 +321,13 @@ public:
         }
     }
     // sheep init & operation
-    bool initCellSheep(int x, int y, int owner)
+    bool initCellSheep(int x, int y, player *own)
     {
         for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
         {
             if (it->getDegX() == x && it->getDegY() == y)
             {
-                it->setowner(owner);
+                it->setowner(own);
                 it->setSheeps(16);
                 return true;
             }
@@ -323,14 +360,14 @@ public:
         std::cerr << "No instence\n";
         return;
     }
-    bool moveSheep(cell &from, cell &to, int num, int player)
+    bool moveSheep(cell &from, cell &to, int num, player *own)
     {
         if (from.getSheeps() > num)
             from.setSheeps(from.getSheeps() - num);
         else
             return false;
         to.setSheeps(num);
-        to.setowner(player);
+        to.setowner(own);
         return true;
     }
     void showCellsCoord()
