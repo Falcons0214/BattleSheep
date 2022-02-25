@@ -223,10 +223,10 @@ private:
             coord[3].setDegXaY(x, y - 1);
         }
     }
-    bool isPartOfToken(int x, int y)
+    bool isPartOfToken(coordinate coord)
     {
         for (int i = 0; i < 4; i++)
-            if (coord[i].getDegX() == x && coord[i].getDegY() == y)
+            if (this->coord[i].getDegX() == coord.getDegX() && this->coord[i].getDegY() == coord.getDegY())
                 return true;
         return false;
     }
@@ -237,7 +237,7 @@ class world
 private:
     void _pushToGroundCandList(coordinate coord, groundToken &puzzle)
     {
-        int candsCoord[6][2] = {{coord.getDegX() - 1, coord.getDegY() + 1},
+        coordinate coords[6] = {{coord.getDegX() - 1, coord.getDegY() + 1},
                                 {coord.getDegX(), coord.getDegY() + 1},
                                 {coord.getDegX() + 1, coord.getDegY()},
                                 {coord.getDegX() + 1, coord.getDegY() - 1},
@@ -248,14 +248,14 @@ private:
             int flag = 0;
             for (std::vector<coordinate>::iterator it = _groundCandList.begin(); it != _groundCandList.end(); it++)
             {
-                if (puzzle.isPartOfToken(candsCoord[i][0], candsCoord[i][1]) || (candsCoord[i][0] == it->getDegX() && candsCoord[i][1] == it->getDegY()))
+                if (puzzle.isPartOfToken(coords[i]) || (*it == coords[i]))
                 {
                     flag = 1;
                     break;
                 }
             }
             if (!flag)
-                _groundCandList.push_back(coordinate(candsCoord[i][0], candsCoord[i][1]));
+                _groundCandList.push_back(coordinate(coords[i]));
         }
     }
     void _moveFromGroundCandList(coordinate coord)
@@ -269,25 +269,25 @@ private:
             }
         }
     }
-    bool _isTokenLegal(int x, int y, int dir)
+    bool _isTokenLegal(coordinate coord, int dir)
     {
-        groundToken puzzle(x, y, dir);
+        groundToken puzzle(coord.getDegX(), coord.getDegY(), dir);
         for (int i = 0; i < 4; i++)
         {
             for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
-                if (it->getDegX() == puzzle.coord[i].getDegX() && it->getDegY() == puzzle.coord[i].getDegY())
+                if (*it == puzzle.coord[i])
                     return false;
         }
         return true;
     }
-    void _findTargetCell(int x, int y, int vecX, int vecY)
+    void _findTargetCell(coordinate coord, coordinate vector)
     {
-        int flag = 1, tmpX = x, tmpY = y;
+        int flag = 1, tmpX = vector.getDegX(), tmpY = vector.getDegY();
         while (1)
         {
             for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
             {
-                if (it->getOwnerId() == -1 && it->getDegX() == tmpX + vecX && it->getDegY() == tmpY + vecY)
+                if (it->getOwnerId() == -1 && it->getDegX() == tmpX + vector.getDegX() && it->getDegY() == tmpY + vector.getDegX())
                 {
                     flag = 0;
                     break;
@@ -295,10 +295,10 @@ private:
             }
             if (flag)
                 break;
-            tmpX += vecX;
-            tmpY += vecY;
+            tmpX += vector.getDegX();
+            tmpY += vector.getDegX();
         }
-        if (x == tmpX && y == tmpY)
+        if (coord.getDegX() == tmpX && coord.getDegY() == tmpY)
             std::cout << "This direction is blind alley\n";
         else
             std::cout << "X: " << tmpX << " Y: " << tmpY << std::endl;
@@ -325,22 +325,22 @@ private:
 public:
     world()
     {
-        putGround(0, 0, DOWN);
+        _groundCandList.push_back(coordinate(0, 0));
         init = true;
     }
     // groundToken operation
-    bool putGround(int x, int y, int method)
+    bool putGround(coordinate coord, int method)
     {
         int flag = 1;
         for(std::vector<coordinate>::iterator it=_groundCandList.begin(); it!=_groundCandList.end(); it++)
-            if(it->getDegX() == x && it->getDegY() == y)
+            if(*it == coord)
                 flag = 0;
         if(flag && init)
         {
             std::cout<<"Error coordinate\n";
             return false;
         }
-        groundToken puzzle(x, y, method);
+        groundToken puzzle(coord.getDegX(), coord.getDegY(), method);
         for (int i = 0; i < 4; i++)
         {
             cellList.push_back(cell(puzzle.coord[i]));
@@ -354,7 +354,7 @@ public:
         for (std::vector<coordinate>::iterator it = _groundCandList.begin(); it != _groundCandList.end(); it++)
             it->showCoordInfo();
     }
-    void getGroundTokenMethod(int x, int y)
+    void listGroundTokenMethod(coordinate coord)
     {
         std::string a[10] = {
             "UP",
@@ -368,15 +368,15 @@ public:
             "UPLINCLINE",
             "UPRINCLINE"};
         for (int i = 0; i < 10; i++)
-            if (_isTokenLegal(x, y, i))
+            if (_isTokenLegal(coord, i))
                 std::cout << a[i] << std::endl;
     }
     // sheep init & operation
-    bool initCellSheep(int x, int y, player *own)
+    bool initCellSheep(coordinate coord, player *own)
     {
         for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
         {
-            if (it->getDegX() == x && it->getDegY() == y)
+            if (*it == coord)
             {
                 it->setowner(own);
                 it->setSheeps(16);
@@ -392,22 +392,20 @@ public:
             if (it->getOwnerId() == player.getPlayerNum() && it->getSheeps() > 1)
                 it->showCoordInfo();
     }
-    void listMoveCandidates(int x, int y)
+    void listMoveCandidates(coordinate coord)
     {
-        int vec[6][2] = {{-1, 1}, {0, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, 0}};
+        coordinate vectors[6] = {{-1, 1}, {0, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, 0}};
         for (int i = 0; i < 6; i++)
         {
             _printDir(i);
-            _findTargetCell(x, y, vec[i][0], vec[i][1]);
+            _findTargetCell(coord, vectors[i]);
         }
     }
-    cell &getTargetCell(int x, int y)
+    cell &getTargetCell(coordinate coord)
     {
         for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
-        {
-            if (it->getDegX() == x && it->getDegY() == y)
+            if (*it == coord)
                 return *it;
-        }
         std::cerr << "No instence\n";
     }
     bool moveSheep(cell &from, cell &to, int num, player *own)
@@ -430,6 +428,8 @@ public:
 int main()
 {
     world game;
+    game.putGround(coordinate(0, 0), UP);
+    game.listGroundCandidates();
 
     return 0;
 }
