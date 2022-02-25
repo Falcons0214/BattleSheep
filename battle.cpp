@@ -226,7 +226,7 @@ private:
     bool isPartOfToken(coordinate coord)
     {
         for (int i = 0; i < 4; i++)
-            if (this->coord[i].getDegX() == coord.getDegX() && this->coord[i].getDegY() == coord.getDegY())
+            if (this->coord[i] == coord)
                 return true;
         return false;
     }
