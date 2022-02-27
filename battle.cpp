@@ -12,6 +12,8 @@
 #define UPRIGHT 7
 #define UPLINCLINE 8
 #define UPRINCLINE 9
+#define DOWNLINCLINE 10
+#define DOWNRINCLINE 11
 
 class player
 {
@@ -159,7 +161,7 @@ struct groundToken
 private:
     coordinate coord[4];
     groundToken() {}
-    groundToken(int x, int y, int method)
+    groundToken(int x, int y, int method) // less 2 methods
     {
         coord[0].setDegXaY(x, y);
         if (method == UP)
@@ -222,6 +224,18 @@ private:
             coord[2].setDegXaY(x - 1, y);
             coord[3].setDegXaY(x, y - 1);
         }
+        else if (method == DOWNLINCLINE)
+        {
+            coord[1].setDegXaY(x + 1, y - 1);
+            coord[2].setDegXaY(x - 1, y);
+            coord[3].setDegXaY(x, y - 1);
+        }
+        else if (method == DOWNRINCLINE)
+        {
+            coord[1].setDegXaY(x + 1, y - 1);
+            coord[2].setDegXaY(x + 1, y);
+            coord[3].setDegXaY(x, y + 1);
+        }
     }
     bool isPartOfToken(coordinate coord)
     {
@@ -280,6 +294,16 @@ private:
         }
         return true;
     }
+    bool _isInitLegal(coordinate coord)
+    {
+        unsigned short count = 0;
+        for (int i = 0; i < 6; i++)
+            for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
+                if (coord.getDegX() + dirDegX[i] == it->getDegX() && coord.getDegY() + dirDegY[i] == it->getDegY())
+                    count++;
+        
+        return (count == 6 || count == 0) ? false : true;
+    }
     void _findTargetCell(coordinate coord, coordinate vector)
     {
         int flag = 1, tmpX = vector.getDegX(), tmpY = vector.getDegY();
@@ -332,12 +356,12 @@ public:
     bool putGround(coordinate coord, int method)
     {
         int flag = 1;
-        for(std::vector<coordinate>::iterator it=_groundCandList.begin(); it!=_groundCandList.end(); it++)
-            if(*it == coord)
+        for (std::vector<coordinate>::iterator it = _groundCandList.begin(); it != _groundCandList.end(); it++)
+            if (*it == coord)
                 flag = 0;
-        if(flag && init)
+        if (flag && init)
         {
-            std::cout<<"Error coordinate\n";
+            std::cout << "Error coordinate\n";
             return false;
         }
         groundToken puzzle(coord.getDegX(), coord.getDegY(), method);
@@ -372,8 +396,13 @@ public:
                 std::cout << a[i] << std::endl;
     }
     // sheep init & operation
-    bool initCellSheep(coordinate coord, player *own)
+    bool initCellSheep(coordinate coord, player *own) // not yet: check start location
     {
+        if(!_isInitLegal(coord))
+        {
+            std::cerr << "Please check your coordinate is legal\n";    
+            return false;
+        }
         for (std::vector<cell>::iterator it = cellList.begin(); it != cellList.end(); it++)
         {
             if (*it == coord)
@@ -383,8 +412,6 @@ public:
                 return true;
             }
         }
-        std::cerr << "Can't find the cell\n";
-        return false;
     }
     void listPlayerSheepCand(const player &player)
     {
